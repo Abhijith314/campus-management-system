@@ -63,7 +63,7 @@ const Login = () => {
         
         <form onSubmit={handleLogin}>
           <div className="mb-4">
-            <label htmlFor="email" className="block text-gray-700 font-bold mb-2">
+            <label htmlFor="email" className="block text-black font-bold mb-2">
               Email
             </label>
             <input
@@ -71,14 +71,14 @@ const Login = () => {
               id="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring focus:border-blue-300"
+              className="w-full px-3 py-2 border rounded-md text-black focus:outline-none focus:ring focus:border-blue-300"
               placeholder="Enter your email"
               required
             />
           </div>
           
           <div className="mb-6">
-            <label htmlFor="password" className="block text-gray-700 font-bold mb-2">
+            <label htmlFor="password" className="block text-gray-700 text-black font-bold mb-2">
               Password
             </label>
             <input
@@ -86,7 +86,7 @@ const Login = () => {
               id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring focus:border-blue-300"
+              className="w-full px-3 py-2 border rounded-md text-black focus:outline-none focus:ring focus:border-blue-300"
               placeholder="Enter your password"
               required
             />

@@ -8,7 +8,6 @@ import {
 } from 'react-router-dom'
 import Login from './components/auth/Login'
 import HODDashboard from './pages/HODDashboard'
-// import HODDashboard from './components/hod/HODDashboard'
 import { supabase } from './services/supabase'
 
 const App = () => {
