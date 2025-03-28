@@ -1,50 +1,102 @@
-import { useState, useEffect } from "react";
-import { getClasses, getFaculty, assignFacultyToClass } from "../../services/facultyService";
+import { useState } from "react";
+import { supabase } from "../../supabaseClient"; // Ensure Supabase is initialized
 import HODSidebar from "./HODSidebar";
 
-const AssignFaculty = () => {
-    const [classes, setClasses] = useState([]);
-    const [faculty, setFaculty] = useState([]);
-    const [selectedClass, setSelectedClass] = useState("");
-    const [selectedFaculty, setSelectedFaculty] = useState("");
+const AddFaculty = () => {
+    const [name, setName] = useState("");
+    const [email, setEmail] = useState("");
+    const [phone, setPhone] = useState("");
+    const [password, setPassword] = useState("");
+    const [loading, setLoading] = useState(false);
 
-    useEffect(() => {
-        const fetchData = async () => {
-            setClasses(await getClasses());
-            setFaculty(await getFaculty());
-        };
-        fetchData();
-    }, []);
+    const handleAddFaculty = async (e) => {
+        e.preventDefault();
+        if (!name || !email || !phone || !password) {
+            alert("Please fill all fields.");
+            return;
+        }
 
-    const handleAssign = async () => {
-        if (!selectedClass || !selectedFaculty) return alert("Please select both a class and a faculty.");
-        await assignFacultyToClass(selectedClass, selectedFaculty);
-        alert("Faculty assigned successfully!");
+        setLoading(true);
+
+        // Insert into the faculty table
+        const { data: facultyData, error: facultyError } = await supabase
+            .from("faculty")
+            .insert([{ name, email, phone, activeStatus: true }])
+            .select();
+
+        if (facultyError) {
+            alert("Error adding faculty: " + facultyError.message);
+            setLoading(false);
+            return;
+        }
+
+        // Insert into the user table for authentication
+        const { error: userError } = await supabase
+            .from("users")
+            .insert([{ email, password, role: "faculty" }]);
+
+        if (userError) {
+            alert("Error creating faculty account: " + userError.message);
+        } else {
+            alert("Faculty added successfully!");
+        }
+
+        setLoading(false);
+        setName("");
+        setEmail("");
+        setPhone("");
+        setPassword("");
     };
 
     return (
         <div className="flex">
             <HODSidebar />
-            <div className="p-5">
-            <h2 className="text-2xl font-bold">Assign Faculty to Class</h2>
-            <div className="mt-3 space-y-3">
-                <select onChange={(e) => setSelectedClass(e.target.value)} className="border p-2 w-full">
-                    <option value="">Select Class</option>
-                    {classes.map((cls) => (
-                        <option key={cls.id} value={cls.id}>{cls.class_name}</option>
-                    ))}
-                </select>
-                <select onChange={(e) => setSelectedFaculty(e.target.value)} className="border p-2 w-full">
-                    <option value="">Select Faculty</option>
-                    {faculty.map((fac) => (
-                        <option key={fac.id} value={fac.id}>{fac.name} ({fac.dept})</option>
-                    ))}
-                </select>
-                <button onClick={handleAssign} className="bg-green-500 text-white px-4 py-2">Assign Faculty</button>
+            <div className="p-5 w-full">
+                <h2 className="text-2xl font-bold">Add Faculty</h2>
+                <form onSubmit={handleAddFaculty} className="mt-5 space-y-3">
+                    <input
+                        type="text"
+                        placeholder="Full Name"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="border p-2 w-full"
+                        required
+                    />
+                    <input
+                        type="email"
+                        placeholder="Email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="border p-2 w-full"
+                        required
+                    />
+                    <input
+                        type="text"
+                        placeholder="Phone Number"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        className="border p-2 w-full"
+                        required
+                    />
+                    <input
+                        type="password"
+                        placeholder="Initial Password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="border p-2 w-full"
+                        required
+                    />
+                    <button
+                        type="submit"
+                        className="bg-blue-500 text-white px-4 py-2"
+                        disabled={loading}
+                    >
+                        {loading ? "Adding..." : "Add Faculty"}
+                    </button>
+                </form>
             </div>
-        </div>
         </div>
     );
 };
 
-export default AssignFaculty;
+export default AddFaculty;
