@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { getClasses, getFaculty, assignFacultyToClass } from "../../services/facultyService";
+import HODSidebar from "./HODSidebar";
 
 const AssignFaculty = () => {
     const [classes, setClasses] = useState([]);
@@ -22,7 +23,9 @@ const AssignFaculty = () => {
     };
 
     return (
-        <div className="p-5">
+        <div className="flex">
+            <HODSidebar />
+            <div className="p-5">
             <h2 className="text-2xl font-bold">Assign Faculty to Class</h2>
             <div className="mt-3 space-y-3">
                 <select onChange={(e) => setSelectedClass(e.target.value)} className="border p-2 w-full">
@@ -39,6 +42,7 @@ const AssignFaculty = () => {
                 </select>
                 <button onClick={handleAssign} className="bg-green-500 text-white px-4 py-2">Assign Faculty</button>
             </div>
+        </div>
         </div>
     );
 };

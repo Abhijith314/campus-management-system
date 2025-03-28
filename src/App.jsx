@@ -1,13 +1,11 @@
 // src/App.jsx
 import React from 'react'
-import { 
-  BrowserRouter as Router, 
-  Routes, 
-  Route, 
-  Navigate 
-} from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import Login from './components/auth/Login'
 import HODDashboard from './pages/HODDashboard'
+import ClassManagement from './components/hod/ClassManagement'
+import FacultyManagement from './components/hod/FacultyManagement'
+import StudentManagement from './components/hod/StudentManagement'
 import { supabase } from './services/supabase'
 
 const App = () => {
@@ -15,6 +13,7 @@ const App = () => {
     <Router>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/logout" element={<Login />} />
         <Route 
           path="/hod-dashboard" 
           element={
@@ -24,6 +23,33 @@ const App = () => {
             />
           } 
         />
+        <Route 
+          path="/hod/classes" 
+          element={
+            <ProtectedRoute 
+              component={ClassManagement} 
+              requiredRole="HOD" 
+            />
+          } 
+        /> 
+        <Route 
+          path="/hod/faculty" 
+          element={
+            <ProtectedRoute 
+              component={FacultyManagement} 
+              requiredRole="HOD" 
+            />
+          } 
+        />
+        <Route 
+          path="/hod/students" 
+          element={
+            <ProtectedRoute 
+              component={StudentManagement} 
+              requiredRole="HOD" 
+            />
+          } 
+        /> 
         <Route path="/" element={<Navigate to="/login" />} />
       </Routes>
     </Router>

@@ -24,7 +24,7 @@ const Login = () => {
       // Verify HOD role
       const { data: hodData, error: roleError } = await supabase
         .from('users')
-        .select('role')
+        .select('role', 'password')
         .eq('email', email)
         .maybeSingle(); // ✅ Prevents errors if no rows exist
 

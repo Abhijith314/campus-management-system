@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { getClasses, addClass, deleteClass } from "../../services/classService";
+import HODSidebar from "./HODSidebar";
 
 const ClassManagement = () => {
     const [classes, setClasses] = useState([]);
@@ -28,7 +29,9 @@ const ClassManagement = () => {
     };
 
     return (
-        <div className="p-5">
+        <div className="flex">
+            <HODSidebar />
+            <div className="p-5">
             <h2 className="text-2xl font-bold">Class Management</h2>
             <div className="mt-3">
                 <input
@@ -55,6 +58,7 @@ const ClassManagement = () => {
                     </li>
                 ))}
             </ul>
+        </div>
         </div>
     );
 };
