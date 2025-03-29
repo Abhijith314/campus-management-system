@@ -17,7 +17,7 @@ export const getClasses = async () => {
 export const getFaculties = async () => {
     try {
         const { data, error } = await supabase
-            .from("faculties")
+            .from("faculty")
             .select("*");
 
         if (error) {

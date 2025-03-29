@@ -162,7 +162,7 @@ const FacultyManagement = () => {
                 {/* Initial Password Modal */}
                 {showPasswordModal && (
                     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-                        <div className="bg-white p-5 rounded-md text-center">
+                        <div className="bg-black p-5 rounded-md text-center">
                             <h3 className="text-xl font-bold mb-4">Faculty Added Successfully</h3>
                             <p className="mb-4">Initial Password: <strong>{initialPassword}</strong></p>
                             <p className="mb-4 text-red-500">Please ask the faculty to change this password upon first login.</p>
