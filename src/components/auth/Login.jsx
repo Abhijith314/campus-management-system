@@ -1,4 +1,3 @@
-// src/components/auth/Login.jsx
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../services/supabase'
@@ -11,49 +10,48 @@ const Login = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault()
-    
+
     try {
       // Authenticate user
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password
       })
-  
+
       if (authError) throw authError
-  
-      // Verify HOD role
-      const { data: hodData, error: roleError } = await supabase
+
+      // Fetch user role
+      const { data: userData, error: roleError } = await supabase
         .from('users')
-        .select('role', 'password')
+        .select('role')
         .eq('email', email)
-        .maybeSingle(); // ✅ Prevents errors if no rows exist
+        .maybeSingle() // Prevents errors if no rows exist
 
-      if (roleError) throw roleError;
-      if (!hodData) {
-        setError('User not found. Please register first.');
-        return;
-      }
-
-  
-      // Check if user is HOD
-      if (hodData.role !== 'HOD') {
-        setError('Access denied. You are not an HOD.')
+      if (roleError) throw roleError
+      if (!userData) {
+        setError('User not found. Please register first.')
         return
       }
-  
-      // Successful HOD login
-      navigate('/hod-dashboard')
+
+      // Redirect based on role
+      if (userData.role === 'HOD') {
+        navigate('/hod-dashboard')
+      } else if (userData.role === 'Faculty') {
+        navigate('/faculty-dashboard')
+      } else {
+        setError('Access denied. You are not authorized.')
+      }
+      
     } catch (err) {
       setError(err.message || 'Login failed')
       console.error('Login error:', err)
     }
   }
-  
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white p-8 rounded-lg shadow-md w-96">
-        <h2 className="text-2xl font-bold mb-6 text-center">HOD Login</h2>
+        <h2 className="text-2xl font-bold mb-6 text-center">Login</h2>
         
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
