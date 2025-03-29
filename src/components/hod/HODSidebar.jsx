@@ -7,5 +7,5 @@ const menuItems = [
     { name: "Students", path: "/hod/students" }
 ];
 
-const HODSidebar = () => <Sidebar role="Admin" menuItems={menuItems} />;
+const HODSidebar = () => <Sidebar role="HOD" menuItems={menuItems} />;
 export default HODSidebar;

@@ -217,7 +217,7 @@ const ClassManagement = () => {
                                     const cls = classes.find(c => c.id === e.target.value);
                                     setSelectedClass(cls);
                                 }}
-                                className="w-full p-2 border rounded"
+                                className="w-full p-2 bg-black border rounded"
                             >
                                 <option value="">Select a Class</option>
                                 {classes.map((cls) => (
@@ -269,7 +269,7 @@ const ClassManagement = () => {
                                                             <select
                                                                 value={subject.faculty_id || ''}
                                                                 onChange={(e) => handleAssignFaculty(subject.id, e.target.value)}
-                                                                className="w-full p-1"
+                                                                className="w-full bg-black p-1"
                                                             >
                                                                 <option value="">Assign Faculty</option>
                                                                 {faculties.map((faculty) => (

@@ -20,17 +20,17 @@ const HODDashboard = () => {
             <div className="flex">
             <HODSidebar />
             <div className="flex-1 p-5">
-            <h1>HOD Dashboard</h1>
+            {/* <h1>HOD Dashboard</h1>
             <ul>
                 {users.map(user => (
                     <li key={user.id}>{user.email} - {user.role}</li>
                 ))}
-            </ul>
-                <h1 className="text-3xl font-bold bg-white-500">Admin Dashboard</h1>
+            </ul> */}
+                <h1 className="text-3xl font-bold bg-white-500">HOD Dashboard</h1>
                 <div className="grid grid-cols-3 text-white gap-5 mt-5">
                     <Link to="/hod/classes" className="p-5 bg-lime-500 text-white rounded">Manage Classes</Link>
-                    <Link to="/hod/faculty" className="p-5 bg-green-500 text-white rounded">Manage Faculty</Link>
-                    <Link to="/hod/students" className="p-5 bg-yellow-500 text-white rounded">Manage Students</Link>
+                    <Link to="/hod/faculty" className="p-5 bg-lime-500 text-white rounded">Manage Faculty</Link>
+                    <Link to="/hod/students" className="p-5 bg-lime-500 text-white rounded">Manage Students</Link>
                 </div>
             </div>
         </div>

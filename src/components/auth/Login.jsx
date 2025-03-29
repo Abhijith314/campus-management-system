@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../services/supabase'
+import background from '../../assets/background.jpg'
 
 const Login = () => {
   const [email, setEmail] = useState('')
@@ -49,16 +50,17 @@ const Login = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-md w-96">
-        <h2 className="text-2xl font-bold mb-6 text-center">Login</h2>
-        
+    <div className="min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat w-screen h-screen" 
+    style={{ backgroundImage: `url(${background})` }}>
+      <div className="bg-white bg-opacity-90 p-8 rounded-lg shadow-md w-96">
+        <h2 className="text-2xl font-bold mb-6 text-center text-black">Login</h2>
+
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
             {error}
           </div>
         )}
-        
+
         <form onSubmit={handleLogin}>
           <div className="mb-4">
             <label htmlFor="email" className="block text-black font-bold mb-2">
@@ -74,9 +76,9 @@ const Login = () => {
               required
             />
           </div>
-          
+
           <div className="mb-6">
-            <label htmlFor="password" className="block text-gray-700 text-black font-bold mb-2">
+            <label htmlFor="password" className="block text-black font-bold mb-2">
               Password
             </label>
             <input
@@ -89,7 +91,7 @@ const Login = () => {
               required
             />
           </div>
-          
+
           <button
             type="submit"
             className="w-full bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition duration-300"
@@ -99,7 +101,7 @@ const Login = () => {
         </form>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Login
+export default Login;

@@ -13,7 +13,7 @@ const FacultyDashboard = () => {
       <div className="flex-1 p-5">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold">Faculty Dashboard</h1>
-          <div>
+          {/* <div>
             <span className="mr-4">Welcome, {user?.email}</span>
             <button
               onClick={signOut}
@@ -21,31 +21,31 @@ const FacultyDashboard = () => {
             >
               Logout
             </button>
-          </div>
+          </div> */}
         </div>
 
         <div className="grid grid-cols-3 text-white gap-5 mt-5">
           <Link
             to="/faculty/classes"
-            className="p-5 bg-yellow-500 text-white rounded"
+            className="p-5 bg-lime-500 text-white rounded"
           >
             Manage Classes
           </Link>
           <Link
             to="/faculty/marks"
-            className="p-5 bg-yellow-500 text-white rounded"
+            className="p-5 bg-lime-500 text-white rounded"
           >
             Manage Marks
           </Link>
           <Link
             to="/faculty/assignment"
-            className="p-5 bg-yellow-500 text-white rounded"
+            className="p-5 bg-lime-500 text-white rounded"
           >
             Manage Assignments
           </Link>
           <Link
             to="/faculty/students"
-            className="p-5 bg-yellow-500 text-white rounded"
+            className="p-5 bg-lime-500 text-white rounded"
           >
             View Students
           </Link>
