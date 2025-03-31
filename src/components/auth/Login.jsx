@@ -11,34 +11,62 @@ const Login = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault()
-
+  
     try {
       // Authenticate user
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password
       })
-
+  
       if (authError) throw authError
-
+  
       // Fetch user role
       const { data: userData, error: roleError } = await supabase
         .from('users')
         .select('role')
         .eq('email', email)
-        .maybeSingle() // Prevents errors if no rows exist
-
+        .maybeSingle()
+  
       if (roleError) throw roleError
       if (!userData) {
         setError('User not found. Please register first.')
         return
       }
-
+  
+      // Check if faculty is a batch coordinator
+      if (userData.role === 'Faculty') {
+        const { data: facultyData, error: facultyError } = await supabase
+          .from('faculty')
+          .select('id')
+          .eq('email', email)
+          .maybeSingle()
+  
+        if (facultyError) throw facultyError
+  
+        if (facultyData) {
+          const { data: batchCoordinatorData, error: batchError } = await supabase
+            .from('classes')
+            .select('*')
+            .eq('batch_coordinator_id', facultyData.id)
+  
+          if (batchError) throw batchError
+  
+          // If faculty is a batch coordinator, redirect to batch coordinator dashboard
+          if (batchCoordinatorData && batchCoordinatorData.length > 0) {
+            navigate('/batch-coordinator-dashboard')
+            return
+          }
+        }
+      }
+  
       // Redirect based on role
       if (userData.role === 'HOD') {
         navigate('/hod-dashboard')
       } else if (userData.role === 'Faculty') {
         navigate('/faculty-dashboard')
+      } else if (userData.role === 'Student') {
+        navigate('/student-dashboard')
       } else {
         setError('Access denied. You are not authorized.')
       }

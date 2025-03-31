@@ -1,6 +1,7 @@
 // src/components/faculty/MarksEntry.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../services/supabase';
+import FacultySidebar from './FacultySidebar';
 
 const MarksEntry = () => {
   const [assignments, setAssignments] = useState([]);
@@ -90,6 +91,8 @@ const MarksEntry = () => {
   };
 
   return (
+    <div className="flex">
+      <FacultySidebar />
     <div className="marks-entry">
       <h2>Assignment Marks Entry</h2>
       
@@ -136,6 +139,7 @@ const MarksEntry = () => {
           Submit Marks
         </button>
       </form>
+    </div>
     </div>
   );
 };

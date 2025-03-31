@@ -1,52 +1,62 @@
 // src/components/student/ProfileCreation.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../services/supabase';
+import StudentSidebar from './StudentSidebar';
 
 const ProfileCreation = () => {
   const [profileData, setProfileData] = useState({
-    firstName: '',
-    lastName: '',
-    dateOfBirth: '',
+    reg_no: '',
+    name_of_student: '',
+    class_name: '',
+    dept: '',
     email: '',
-    contact: '',
-    address: '',
-    department: '',
-    class: ''
+    ph_no: '',
+    addr: '',
+    date_of_birth: ''
   });
 
+  const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState(null);
 
-  // Fetch current user
+  // Fetch current user and profile data
   useEffect(() => {
-    const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        setUserId(user.id);
+    const fetchUserProfile = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
         
-        // Fetch existing profile data
-        const { data, error } = await supabase
-          .from('students')
-          .select('*')
-          .eq('id', user.id)
-          .single();
+        if (user) {
+          setUserId(user.id);
+          
+          // Fetch student profile data
+          const { data, error } = await supabase
+            .from('students')
+            .select('*')
+            .eq('id', user.id)
+            .single();
 
-        if (data) {
-          setProfileData({
-            firstName: data.first_name || '',
-            lastName: data.last_name || '',
-            dateOfBirth: data.date_of_birth || '',
-            email: user.email || '',
-            contact: data.contact || '',
-            address: data.address || '',
-            department: data.department || '',
-            class: data.class || ''
-          });
+          if (error) throw error;
+
+          if (data) {
+            setProfileData({
+              reg_no: data.reg_no || '',
+              name_of_student: data.name_of_student || '',
+              class_name: data.class_name || '',
+              dept: data.dept || '',
+              email: data.email || user.email || '',
+              ph_no: data.ph_no || '',
+              addr: data.addr || '',
+              date_of_birth: data.date_of_birth || ''
+            });
+          }
         }
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchUser();
+    fetchUserProfile();
   }, []);
 
   const handleInputChange = (e) => {
@@ -57,134 +67,155 @@ const ProfileCreation = () => {
     }));
   };
 
-  const submitProfile = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     try {
-      // Update user profile
+      setLoading(true);
+      
       const { error } = await supabase
         .from('students')
         .upsert({
           id: userId,
-          first_name: profileData.firstName,
-          last_name: profileData.lastName,
-          date_of_birth: profileData.dateOfBirth,
-          contact: profileData.contact,
-          address: profileData.address,
-          department: profileData.department,
-          class: profileData.class
+          ph_no: profileData.ph_no,
+          addr: profileData.addr
         }, { onConflict: 'id' });
 
       if (error) throw error;
 
-      alert('Profile updated successfully');
+      alert('Profile updated successfully!');
     } catch (error) {
-      console.error('Profile update error:', error);
-      alert('Failed to update profile');
+      console.error('Update error:', error);
+      alert('Failed to update profile. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex">
+        <StudentSidebar />
+        <div className="flex-1 p-8">
+          <div className="text-center">Loading profile data...</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="profile-creation">
-      <h2>Create/Update Student Profile</h2>
-      
-      <form onSubmit={submitProfile}>
-        <div>
-          <label>First Name</label>
-          <input
-            type="text"
-            name="firstName"
-            value={profileData.firstName}
-            onChange={handleInputChange}
-            required
-          />
+    <div className="flex">
+      <StudentSidebar />
+      <div className="flex-1 p-8">
+        <div className="max-w-2xl mx-auto bg-grey rounded-lg shadow-md p-6">
+          <h2 className="text-2xl font-bold mb-6 text-white-800">Student Profile</h2>
+          
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Non-editable fields */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-white-700">Registration Number</label>
+                <input
+                  type="text"
+                  value={profileData.reg_no}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-black-100 p-2"
+                  readOnly
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-white-700">Full Name</label>
+                <input
+                  type="text"
+                  value={profileData.name_of_student}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-black-100 p-2"
+                  readOnly
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-white-700">Class</label>
+                <input
+                  type="text"
+                  value={profileData.class_name}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-black-100 p-2"
+                  readOnly
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-white-700">Department</label>
+                <input
+                  type="text"
+                  value={profileData.dept}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-black-100 p-2"
+                  readOnly
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-white-700">Email</label>
+                <input
+                  type="email"
+                  value={profileData.email}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-black-100 p-2"
+                  readOnly
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-white-700">Date of Birth</label>
+                <input
+                  type="text"
+                  value={profileData.date_of_birth}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-black-100 p-2"
+                  readOnly
+                />
+              </div>
+            </div>
+            
+            {/* Editable fields */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Phone Number</label>
+                <input
+                  type="tel"
+                  name="ph_no"
+                  value={profileData.ph_no}
+                  onChange={handleInputChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
+                  required
+                  pattern="[0-9]{10}"
+                  maxLength="10"
+                  title="Please enter a 10-digit phone number"
+                />
+              </div>
+              
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700">Address</label>
+                <textarea
+                  name="addr"
+                  value={profileData.addr}
+                  onChange={handleInputChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
+                  rows="3"
+                  required
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end mt-6">
+              <button
+                type="submit"
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                disabled={loading}
+              >
+                {loading ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </form>
         </div>
-        
-        <div>
-          <label>Last Name</label>
-          <input
-            type="text"
-            name="lastName"
-            value={profileData.lastName}
-            onChange={handleInputChange}
-            required
-          />
-        </div>
-        
-        <div>
-          <label>Date of Birth</label>
-          <input
-            type="date"
-            name="dateOfBirth"
-            value={profileData.dateOfBirth}
-            onChange={handleInputChange}
-            required
-          />
-        </div>
-        
-        <div>
-          <label>Email</label>
-          <input
-            type="email"
-            name="email"
-            value={profileData.email}
-            disabled
-          />
-        </div>
-        
-        <div>
-          <label>Contact Number</label>
-          <input
-            type="tel"
-            name="contact"
-            value={profileData.contact}
-            onChange={handleInputChange}
-            required
-          />
-        </div>
-        
-        <div>
-          <label>Address</label>
-          <textarea
-            name="address"
-            value={profileData.address}
-            onChange={handleInputChange}
-            required
-          />
-        </div>
-        
-        <div>
-          <label>Department</label>
-          <select
-            name="department"
-            value={profileData.department}
-            onChange={handleInputChange}
-            required
-          >
-            <option value="">Select Department</option>
-            <option value="Computer Science">Computer Science</option>
-            <option value="Information Technology">Information Technology</option>
-            <option value="Electronics">Electronics</option>
-          </select>
-        </div>
-        
-        <div>
-          <label>Class</label>
-          <select
-            name="class"
-            value={profileData.class}
-            onChange={handleInputChange}
-            required
-          >
-            <option value="">Select Class</option>
-            <option value="CS-2022">CS-2022</option>
-            <option value="IT-2022">IT-2022</option>
-            <option value="ENTC-2022">ENTC-2022</option>
-          </select>
-        </div>
-        
-        <button type="submit">Save Profile</button>
-      </form>
+      </div>
     </div>
   );
 };

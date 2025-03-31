@@ -1,152 +1,234 @@
 // src/components/batch-coordinator/StudentRegistration.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from "react";
 import { supabase } from '../../services/supabase';
+import { addStudent, getStudentsByCoordinator } from "../../services/studentService";
+import BatchcoordiantorSidebar from "../batch-coordinator/BatchcoordinatorSidebar";
 
 const StudentRegistration = () => {
-  const [studentData, setStudentData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    class: '',
-    department: '',
-    password: ''
-  });
+    const [students, setStudents] = useState([]);
+    const [showForm, setShowForm] = useState(false);
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [initialCredentials, setInitialCredentials] = useState({
+        password: "",
+        email: ""
+    });
+    const [newStudent, setNewStudent] = useState({
+        reg_no: "",
+        name_of_student: "",
+        date_of_birth: ""
+    });
+    const [currentBatchCoordinator, setCurrentBatchCoordinator] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setStudentData(prevState => ({
-      ...prevState,
-      [name]: value
-    }));
-  };
+    useEffect(() => {
+      const fetchData = async () => {
+        try {
+            // Get current user (batch coordinator)
+            const { data: { user }, error: authError } = await supabase.auth.getUser();
+            
+            if (authError) throw authError;
+            if (!user) throw new Error("No authenticated user");
+    
+            // Get faculty information to get the faculty ID and department
+            const { data: facultyData, error: facultyError } = await supabase
+                .from('faculty')
+                .select('id, dept')
+                .eq('email', user.email)
+                .single();
+    
+            if (facultyError || !facultyData) {
+                throw new Error("Faculty information not found");
+            }
+    
+            setCurrentBatchCoordinator(facultyData.id);
+            const data = await getStudentsByCoordinator(facultyData.id);
+            setStudents(data || []);
+        } catch (error) {
+            console.error("Error fetching data:", error);
+            setError("Failed to load student data: " + error.message);
+        }
+    };
 
-  const handleStudentRegistration = async (e) => {
-    e.preventDefault();
-    try {
-      // Sign up user in Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: studentData.email,
-        password: studentData.password
-      });
+        fetchData();
+    }, []);
 
-      if (authError) throw authError;
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setNewStudent({ ...newStudent, [name]: value });
+    };
 
-      // Insert student details into users and students tables
-      const { error: userError } = await supabase
-        .from('users')
-        .insert({
-          id: authData.user.id,
-          email: studentData.email,
-          first_name: studentData.firstName,
-          last_name: studentData.lastName,
-          role: 'student'
-        });
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setError(null);
 
-      const { error: studentError } = await supabase
-        .from('students')
-        .insert({
-          id: authData.user.id,
-          class: studentData.class,
-          department: studentData.department
-        });
+        try {
+            // Validate date format
+            if (!newStudent.date_of_birth.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                throw new Error("Date of birth must be in YYYY-MM-DD format");
+            }
 
-      if (userError || studentError) {
-        throw userError || studentError;
-      }
+            const result = await addStudent(newStudent, currentBatchCoordinator);
+            
+            if (result.success) {
+                setInitialCredentials({
+                    password: result.initialPassword,
+                    email: result.studentEmail
+                });
+                setShowForm(false);
+                setShowPasswordModal(true);
+                setStudents(await getStudentsByCoordinator(currentBatchCoordinator));
+            } else {
+                throw new Error(result.error);
+            }
+        } catch (error) {
+            setError(error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-      alert('Student registered successfully');
-      
-      // Reset form
-      setStudentData({
-        firstName: '',
-        lastName: '',
-        email: '',
-        class: '',
-        department: '',
-        password: ''
-      });
-    } catch (error) {
-      console.error('Registration error:', error);
-      alert('Registration failed: ' + error.message);
-    }
-  };
+    const handlePasswordModalClose = () => {
+        setShowPasswordModal(false);
+        setInitialCredentials({ password: "", email: "" });
+    };
 
-  return (
-    <div className="student-registration">
-      <h2>Student Registration</h2>
-      <form onSubmit={handleStudentRegistration}>
-        <div>
-          <label>First Name</label>
-          <input
-            type="text"
-            name="firstName"
-            value={studentData.firstName}
-            onChange={handleInputChange}
-            required
-          />
+    return (
+        <div className="flex">
+            <BatchcoordiantorSidebar />
+            <div className="p-5 w-full">
+                <h2 className="text-2xl font-bold">Student Registration</h2>
+                <button
+                    className="bg-blue-600 text-white px-4 py-2 mt-3 rounded-md hover:bg-blue-700 transition"
+                    onClick={() => setShowForm(true)}
+                    disabled={loading}
+                >
+                    {loading ? "Loading..." : "Register Student"}
+                </button>
+
+                {error && (
+                    <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mt-3">
+                        {error}
+                    </div>
+                )}
+
+                <h5 className="text-2xl font-bold mt-5">Registered Students</h5>
+
+                <div className="mt-5 overflow-x-auto">
+                    <table className="w-full border-collapse border border-gray-300">
+                        <thead>
+                            <tr className="bg-black-200">
+                                <th className="border p-3">Reg. No</th>
+                                <th className="border p-3">Student Name</th>
+                                <th className="border p-3">Class</th>
+                                <th className="border p-3">Department</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {students.map((student) => (
+                                <tr key={student.id} className="border">
+                                    <td className="border p-3">{student.reg_no}</td>
+                                    <td className="border p-3">{student.name_of_student}</td>
+                                    <td className="border p-3">{student.class_name}</td>
+                                    <td className="border p-3">{student.dept}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* Student Registration Modal */}
+                {showForm && (
+                    <div className="fixed inset-0 flex items-center justify-center bg-grey bg-opacity-50">
+                        <div className="bg-black p-5 rounded-md w-96">
+                            <h3 className="text-xl font-bold mb-4">Register Student</h3>
+                            <form onSubmit={handleSubmit}>
+                                <div className="mb-3">
+                                    <label className="block text-sm font-medium mb-1">Registration Number</label>
+                                    <input
+                                        type="text"
+                                        name="reg_no"
+                                        placeholder="SGI22CS001"
+                                        className="w-full p-2 border rounded"
+                                        value={newStudent.reg_no}
+                                        onChange={handleInputChange}
+                                        required
+                                        pattern="[A-Za-z0-9]+"
+                                        title="Alphanumeric characters only"
+                                    />
+                                </div>
+                                <div className="mb-3">
+                                    <label className="block text-sm font-medium mb-1">Student Name</label>
+                                    <input
+                                        type="text"
+                                        name="name_of_student"
+                                        placeholder="Full Name"
+                                        className="w-full p-2 border rounded"
+                                        value={newStudent.name_of_student}
+                                        onChange={handleInputChange}
+                                        required
+                                    />
+                                </div>
+                                <div className="mb-3">
+                                    <label className="block text-sm font-medium mb-1">Date of Birth</label>
+                                    <input
+                                        type="date"
+                                        name="date_of_birth"
+                                        className="w-full p-2 border rounded"
+                                        value={newStudent.date_of_birth}
+                                        onChange={handleInputChange}
+                                        required
+                                    />
+                                </div>
+                                <div className="flex gap-2 mt-4">
+                                    <button
+                                        type="submit"
+                                        className="bg-blue-600 text-white px-4 py-2 rounded-md flex-1 hover:bg-blue-700 transition"
+                                        disabled={loading}
+                                    >
+                                        {loading ? "Registering..." : "Register"}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="bg-gray-500 text-white px-4 py-2 rounded-md flex-1 hover:bg-gray-600 transition"
+                                        onClick={() => setShowForm(false)}
+                                        disabled={loading}
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
+                {/* Initial Password Modal */}
+                {showPasswordModal && (
+                    <div className="fixed inset-0 flex items-center justify-center bg-grey bg-opacity-50">
+                        <div className="bg-black p-5 rounded-md text-center w-96">
+                            <h3 className="text-xl font-bold mb-4">Student Registered Successfully</h3>
+                            <div className="bg-gray-100 p-4 rounded mb-4">
+                                <p className="font-semibold">Initial Login Details:</p>
+                                <p>Email: <strong>{initialCredentials.email}</strong></p>
+                                <p>Password: <strong>{initialCredentials.password}</strong></p>
+                            </div>
+                            <p className="mb-4 text-sm text-red-500">
+                                Password is the student's date of birth in DDMMYYYY format.
+                                Ask them to change it after first login.
+                            </p>
+                            <button
+                                className="bg-blue-600 text-white px-4 py-2 rounded-md w-full hover:bg-blue-700 transition"
+                                onClick={handlePasswordModalClose}
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
-        <div>
-          <label>Last Name</label>
-          <input
-            type="text"
-            name="lastName"
-            value={studentData.lastName}
-            onChange={handleInputChange}
-            required
-          />
-        </div>
-        <div>
-          <label>Email</label>
-          <input
-            type="email"
-            name="email"
-            value={studentData.email}
-            onChange={handleInputChange}
-            required
-          />
-        </div>
-        <div>
-          <label>Class</label>
-          <select
-            name="class"
-            value={studentData.class}
-            onChange={handleInputChange}
-            required
-          >
-            <option value="">Select Class</option>
-            <option value="CS-2022">CS-2022</option>
-            <option value="IT-2022">IT-2022</option>
-            <option value="ENTC-2022">ENTC-2022</option>
-          </select>
-        </div>
-        <div>
-          <label>Department</label>
-          <select
-            name="department"
-            value={studentData.department}
-            onChange={handleInputChange}
-            required
-          >
-            <option value="">Select Department</option>
-            <option value="Computer Science">Computer Science</option>
-            <option value="Information Technology">Information Technology</option>
-            <option value="Electronics">Electronics</option>
-          </select>
-        </div>
-        <div>
-          <label>Temporary Password</label>
-          <input
-            type="password"
-            name="password"
-            value={studentData.password}
-            onChange={handleInputChange}
-            required
-          />
-        </div>
-        <button type="submit">Register Student</button>
-      </form>
-    </div>
-  );
+    );
 };
 
 export default StudentRegistration;

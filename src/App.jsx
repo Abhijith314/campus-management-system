@@ -3,10 +3,16 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './context/AuthContext';  // Ensure correct import path
 import Login from './components/auth/Login';
 import HODDashboard from './pages/HODDashboard';
-import FacultyDashboard from './pages/FacultyDashboard';
 import ClassManagement from './components/hod/ClassManagement';
 import FacultyManagement from './components/hod/FacultyManagement';
 import StudentManagement from './components/hod/StudentManagement';
+import FacultyDashboard from './pages/FacultyDashboard';
+import MarksEntry from './components/faculty/MarksEntry';
+import AssignmentManagement from './components/faculty/AssignmentManagement';
+import BatchCoordinatorDashboard from './pages/BatchCoordinatorDashboard';
+import StudentDashboard from './pages/StudentDashboard';
+import ProfileCreation from './components/student/ProfileCreation';
+import StudentRegistration from './components/batch-coordinator/StudentRegistration';
 import { supabase } from './services/supabase'
 
 const App = () => {
@@ -35,6 +41,30 @@ const App = () => {
           <Route 
             path="/faculty-dashboard" 
             element={<ProtectedRoute component={FacultyDashboard} requiredRole="Faculty" />} 
+          />
+          <Route 
+            path="/faculty/marks" 
+            element={<ProtectedRoute component={MarksEntry} requiredRole="Faculty" />} 
+          />
+          <Route 
+            path="/faculty/assignment" 
+            element={<ProtectedRoute component={AssignmentManagement} requiredRole="Faculty" />} 
+          />
+          <Route 
+            path="/batch-coordinator-dashboard" 
+            element={<ProtectedRoute component={BatchCoordinatorDashboard} requiredRole="Faculty" />} 
+          />
+          <Route 
+            path="/batch-coordinator/student-registration" 
+            element={<ProtectedRoute component={StudentRegistration} requiredRole="Faculty" />} 
+          />
+          <Route 
+            path="/student-dashboard" 
+            element={<ProtectedRoute component={StudentDashboard} requiredRole="Student" />} 
+          />
+          <Route 
+            path="/student/profile" 
+            element={<ProtectedRoute component={ProfileCreation} requiredRole="Student" />} 
           />
           <Route path="/" element={<Navigate to="/login" />} />
         </Routes>

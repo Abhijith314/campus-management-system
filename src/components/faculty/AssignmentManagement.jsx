@@ -1,42 +1,95 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../services/supabase';
+import FacultySidebar from './FacultySidebar';
 
 const AssignmentManagement = () => {
+  const [showAssignmentForm, setShowAssignmentForm] = useState(false);
   const [assignment, setAssignment] = useState({
-    subject: '',
+    subject_id: '',
+    subject_name: '',
+    class_id: '',
+    class_name: '',
     title: '',
     description: '',
-    dueDate: '',
-    maxMarks: ''
+    due_date: '',
+    max_score: ''
   });
-
   const [assignments, setAssignments] = useState([]);
+  const [submissions, setSubmissions] = useState([]);
   const [userId, setUserId] = useState(null);
+  const [facultySubjects, setFacultySubjects] = useState([]);
+  const [selectedClass, setSelectedClass] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  // Fetch current user and their assignments
+  // Fetch current user and their subjects
   useEffect(() => {
-    const fetchUserAndAssignments = async () => {
+    const fetchUserData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (user) {
         setUserId(user.id);
         
-        // Fetch assignments for this faculty
-        const { data, error } = await supabase
-          .from('assignments')
-          .select('*')
+        // Fetch faculty's assigned subjects with class information
+        const { data: subjectsData, error: subjectsError } = await supabase
+          .from('subjects')
+          .select(`
+            id,
+            name,
+            class_id,
+            classes (id, name)
+          `)
           .eq('faculty_id', user.id);
 
-        if (error) {
-          console.error('Error fetching assignments:', error);
+        if (subjectsError) {
+          console.error('Error fetching subjects:', subjectsError);
         } else {
-          setAssignments(data);
+          setFacultySubjects(subjectsData || []);
         }
       }
     };
 
-    fetchUserAndAssignments();
+    fetchUserData();
   }, []);
+
+  // Fetch assignments when class selection changes
+  useEffect(() => {
+    if (selectedClass && userId) {
+      fetchAssignments();
+      fetchSubmissions();
+    }
+  }, [selectedClass, userId]);
+
+  const fetchAssignments = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('assignments')
+      .select('*')
+      .eq('class_id', selectedClass)
+      .eq('created_by', userId);
+
+    if (error) {
+      console.error('Error fetching assignments:', error);
+    } else {
+      setAssignments(data || []);
+    }
+    setLoading(false);
+  };
+
+  const fetchSubmissions = async () => {
+    const { data, error } = await supabase
+      .from('assignment_submissions')
+      .select(`
+        *,
+        students (id, name_of_student)
+      `)
+      .eq('class_id', selectedClass);
+
+    if (error) {
+      console.error('Error fetching submissions:', error);
+    } else {
+      setSubmissions(data || []);
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -44,149 +97,300 @@ const AssignmentManagement = () => {
       ...prev,
       [name]: value
     }));
+
+    // Update subject_name when subject_id changes
+    if (name === 'subject_id') {
+      const selectedSubject = facultySubjects.find(sub => sub.id === value);
+      if (selectedSubject) {
+        setAssignment(prev => ({
+          ...prev,
+          subject_name: selectedSubject.name,
+          class_id: selectedSubject.class_id,
+          class_name: selectedSubject.classes.name
+        }));
+      }
+    }
   };
 
   const createAssignment = async (e) => {
     e.preventDefault();
     
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('assignments')
         .insert({
-          faculty_id: userId,
-          subject: assignment.subject,
+          created_by: userId,
+          subject_id: assignment.subject_id,
+          subject_name: assignment.subject_name,
+          class_id: assignment.class_id,
+          class_name: assignment.class_name,
           title: assignment.title,
           description: assignment.description,
-          due_date: assignment.dueDate,
-          max_marks: assignment.maxMarks
+          due_date: assignment.due_date,
+          max_score: assignment.max_score
         });
 
       if (error) throw error;
 
-      // Refresh assignments list
-      const { data: updatedAssignments } = await supabase
-        .from('assignments')
-        .select('*')
-        .eq('faculty_id', userId);
+      // Create initial submissions for all students in the class
+      const { data: students } = await supabase
+        .from('students')
+        .select('id')
+        .eq('class_id', assignment.class_id);
 
-      setAssignments(updatedAssignments);
+      if (students && students.length > 0) {
+        const submissionRecords = students.map(student => ({
+          assignment_id: data[0].id,
+          student_id: student.id,
+          subject_name: assignment.subject_name,
+          class_id: assignment.class_id,
+          status: false
+        }));
 
-      // Reset form
+        await supabase
+          .from('assignment_submissions')
+          .insert(submissionRecords);
+      }
+
+      fetchAssignments();
+      setShowAssignmentForm(false);
       setAssignment({
-        subject: '',
+        subject_id: '',
+        subject_name: '',
+        class_id: '',
+        class_name: '',
         title: '',
         description: '',
-        dueDate: '',
-        maxMarks: ''
+        due_date: '',
+        max_score: ''
       });
-
-      alert('Assignment created successfully');
     } catch (error) {
       console.error('Assignment creation error:', error);
       alert('Failed to create assignment');
     }
   };
 
-  const deleteAssignment = async (assignmentId) => {
+  const updateSubmissionStatus = async (submissionId, status) => {
     try {
       const { error } = await supabase
-        .from('assignments')
-        .delete()
-        .eq('id', assignmentId);
+        .from('assignment_submissions')
+        .update({ status })
+        .eq('id', submissionId);
 
       if (error) throw error;
 
-      // Remove assignment from local state
-      setAssignments(prev => 
-        prev.filter(assignment => assignment.id !== assignmentId)
-      );
-
-      alert('Assignment deleted successfully');
+      fetchSubmissions();
     } catch (error) {
-      console.error('Assignment deletion error:', error);
-      alert('Failed to delete assignment');
+      console.error('Error updating submission:', error);
     }
   };
 
   return (
-    <div className="assignment-management">
-      <h2>Assignment Management</h2>
-      
-      <form onSubmit={createAssignment}>
-        <div>
-          <label>Subject</label>
-          <select
-            name="subject"
-            value={assignment.subject}
-            onChange={handleInputChange}
-            required
+    <div className="flex">
+      <FacultySidebar />
+      <div className="flex-1 p-5">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">Assignment Management</h1> <br></br>
+          <button
+            onClick={() => setShowAssignmentForm(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
           >
-            <option value="">Select Subject</option>
-            <option value="Mathematics">Mathematics</option>
-            <option value="Computer Science">Computer Science</option>
-            <option value="Physics">Physics</option>
+            Create New Assignment
+          </button>
+        </div>
+
+        {/* Class Selection */}
+        <div className="mb-6">
+          <label className="block mb-2 bg-grey font-medium">Select Class:</label>
+          <select
+            value={selectedClass}
+            onChange={(e) => setSelectedClass(e.target.value)}
+            className="w-full p-2 border bg-black rounded"
+          >
+            <option value="">Select a Class</option>
+            {Array.from(new Set(facultySubjects.map(sub => sub.class_id))).map(classId => {
+              const subject = facultySubjects.find(sub => sub.class_id === classId);
+              return (
+                <option key={classId} value={classId}>
+                  {subject.classes.name}
+                </option>
+              );
+            })}
           </select>
         </div>
-        
-        <div>
-          <label>Assignment Title</label>
-          <input
-            type="text"
-            name="title"
-            value={assignment.title}
-            onChange={handleInputChange}
-            required
-          />
-        </div>
-        
-        <div>
-          <label>Description</label>
-          <textarea
-            name="description"
-            value={assignment.description}
-            onChange={handleInputChange}
-            required
-          />
-        </div>
-        
-        <div>
-          <label>Due Date</label>
-          <input
-            type="date"
-            name="dueDate"
-            value={assignment.dueDate}
-            onChange={handleInputChange}
-            required
-          />
-        </div>
-        
-        <div>
-          <label>Max Marks</label>
-          <input
-            type="number"
-            name="maxMarks"
-            value={assignment.maxMarks}
-            onChange={handleInputChange}
-            required
-          />
-        </div>
-        
-        <button type="submit">Create Assignment</button>
-      </form>
 
-      <div className="assignments-list">
-        <h3>Your Assignments</h3>
-        {assignments.map(assignment => (
-          <div key={assignment.id} className="assignment-item">
-            <h4>{assignment.title}</h4>
-            <p>Subject: {assignment.subject}</p>
-            <p>Due Date: {assignment.due_date}</p>
-            <p>Max Marks: {assignment.max_marks}</p>
-            <button onClick={() => deleteAssignment(assignment.id)}>
-              Delete
-            </button>
+        {/* Assignment Creation Modal */}
+        {showAssignmentForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+            <div className="bg-black rounded-lg p-6 w-full max-w-md">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">Create New Assignment</h2>
+                <button 
+                  onClick={() => setShowAssignmentForm(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  &times;
+                </button>
+              </div>
+              <form onSubmit={createAssignment}>
+                <div className="mb-4">
+                  <label className="block mb-1 font-medium bg-black">Subject</label>
+                  <select
+                    name="subject_id"
+                    value={assignment.subject_id}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border rounded"
+                    required
+                  >
+                    <option value="">Select Subject</option>
+                    {facultySubjects.map(subject => (
+                      <option key={subject.id} value={subject.id}>
+                        {subject.name} ({subject.classes.name})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="mb-4">
+                  <label className="block mb-1 font-medium">Title</label>
+                  <input
+                    type="text"
+                    name="title"
+                    value={assignment.title}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border rounded"
+                    required
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block mb-1 font-medium">Description</label>
+                  <textarea
+                    name="description"
+                    value={assignment.description}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border rounded"
+                    rows="3"
+                    required
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block mb-1 font-medium">Due Date</label>
+                  <input
+                    type="date"
+                    name="due_date"
+                    value={assignment.due_date}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border rounded"
+                    required
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block mb-1 font-medium">Max Score</label>
+                  <input
+                    type="number"
+                    name="max_score"
+                    value={assignment.max_score}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border rounded"
+                    required
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAssignmentForm(false)}
+                    className="px-4 py-2 border rounded"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-black rounded hover:bg-blue-700"
+                  >
+                    Create
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        ))}
+        )}
+
+        {/* Assignments List */}
+        {loading ? (
+          <div className="flex justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {selectedClass && assignments.length > 0 ? (
+              assignments.map(assignment => (
+                <div key={assignment.id} className="bg-black rounded-lg shadow-md p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <h3 className="text-lg font-semibold">{assignment.title}</h3>
+                      <p className="text-gray-600">{assignment.subject_name} • {assignment.class_name}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm">Due: {new Date(assignment.due_date).toLocaleDateString()}</p>
+                      <p className="text-sm">Max Score: {assignment.max_score}</p>
+                    </div>
+                  </div>
+                  <p className="mb-4">{assignment.description}</p>
+                  
+                  {/* Submissions Table */}
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Student</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Score</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-black divide-y divide-gray-200">
+                        {submissions
+                          .filter(sub => sub.assignment_id === assignment.id)
+                          .map(submission => (
+                            <tr key={submission.id}>
+                              <td className="px-4 py-2 whitespace-nowrap">
+                                {submission.students?.name_of_student || 'Unknown Student'}
+                              </td>
+                              <td className="px-4 py-2 whitespace-nowrap">
+                                <span className={`px-2 py-1 rounded-full text-xs ${
+                                  submission.status ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                                }`}>
+                                  {submission.status ? 'Submitted' : 'Pending'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-2 whitespace-nowrap">
+                                {submission.score || '-'}
+                              </td>
+                              <td className="px-4 py-2 whitespace-nowrap">
+                                <button
+                                  onClick={() => updateSubmissionStatus(submission.id, !submission.status)}
+                                  className={`px-3 py-1 text-sm rounded ${
+                                    submission.status 
+                                      ? 'bg-yellow-500 text-white hover:bg-yellow-600' 
+                                      : 'bg-green-500 text-white hover:bg-green-600'
+                                  }`}
+                                >
+                                  {submission.status ? 'Mark Pending' : 'Mark Submitted'}
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="bg-black rounded-lg shadow-md p-6 text-center">
+                {selectedClass ? 'No assignments found for this class' : 'Please select a class to view assignments'}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

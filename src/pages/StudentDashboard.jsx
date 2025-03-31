@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabase';
+import StudentSidebar from '../components/student/StudentSidebar';
 
 const StudentDashboard = () => {
   const { user, logout } = useAuth();
@@ -41,10 +42,12 @@ const StudentDashboard = () => {
   }, [user]);
 
   return (
+    <div className="flex">
+      <StudentSidebar />
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Student Dashboard</h1>
-        <div>
+        {/* <div>
           <span className="mr-4">Welcome, {user?.email}</span>
           <button 
             onClick={logout} 
@@ -52,12 +55,12 @@ const StudentDashboard = () => {
           >
             Logout
           </button>
-        </div>
+        </div> */}
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
         {/* Profile Section */}
-        <div className="bg-white shadow-md rounded-lg p-6">
+        <div className="bg-grey shadow-md rounded-lg p-6">
           <h2 className="text-xl font-semibold mb-4">Profile Details</h2>
           {studentData ? (
             <div>
@@ -71,7 +74,7 @@ const StudentDashboard = () => {
         </div>
 
         {/* Attendance Section */}
-        <div className="bg-white shadow-md rounded-lg p-6">
+        <div className="bg-grey shadow-md rounded-lg p-6">
           <h2 className="text-xl font-semibold mb-4">Attendance</h2>
           {attendanceData.length > 0 ? (
             <table className="w-full">
@@ -96,7 +99,7 @@ const StudentDashboard = () => {
         </div>
 
         {/* Marks Section */}
-        <div className="bg-white shadow-md rounded-lg p-6">
+        <div className="bg-grey shadow-md rounded-lg p-6">
           <h2 className="text-xl font-semibold mb-4">Internal Marks</h2>
           {marksData.length > 0 ? (
             <table className="w-full">
@@ -122,6 +125,7 @@ const StudentDashboard = () => {
           )}
         </div>
       </div>
+    </div>
     </div>
   );
 };
