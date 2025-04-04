@@ -20,13 +20,22 @@ const AssignmentManagement = () => {
   const [facultySubjects, setFacultySubjects] = useState([]);
   const [selectedClass, setSelectedClass] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   // Fetch current user and their subjects
   useEffect(() => {
     const fetchUserData = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
+      try {
+        setLoading(true);
+        
+        // First ensure we have a valid session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError || !session) {
+          throw new Error("Please login to access this page");
+        }
+
+        const user = session.user;
         setUserId(user.id);
         
         // Fetch faculty's assigned subjects with class information
@@ -40,11 +49,13 @@ const AssignmentManagement = () => {
           `)
           .eq('faculty_id', user.id);
 
-        if (subjectsError) {
-          console.error('Error fetching subjects:', subjectsError);
-        } else {
-          setFacultySubjects(subjectsData || []);
-        }
+        if (subjectsError) throw subjectsError;
+        setFacultySubjects(subjectsData || []);
+      } catch (error) {
+        console.error("Error fetching faculty data:", error);
+        setError(error.message);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -60,66 +71,60 @@ const AssignmentManagement = () => {
   }, [selectedClass, userId]);
 
   const fetchAssignments = async () => {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from('assignments')
-      .select('*')
-      .eq('class_id', selectedClass)
-      .eq('created_by', userId);
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('assignments')
+        .select('*')
+        .eq('class_id', selectedClass)
+        .eq('created_by', userId);
 
-    if (error) {
-      console.error('Error fetching assignments:', error);
-    } else {
+      if (error) throw error;
       setAssignments(data || []);
+    } catch (error) {
+      console.error('Error fetching assignments:', error);
+      setError('Failed to load assignments');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const fetchSubmissions = async () => {
-    const { data, error } = await supabase
-      .from('assignment_submissions')
-      .select(`
-        *,
-        students (id, name_of_student)
-      `)
-      .eq('class_id', selectedClass);
+    try {
+      const { data, error } = await supabase
+        .from('assignment_submissions')
+        .select(`
+          *,
+          students (id, name_of_student)
+        `)
+        .eq('class_id', selectedClass);
 
-    if (error) {
-      console.error('Error fetching submissions:', error);
-    } else {
+      if (error) throw error;
       setSubmissions(data || []);
-    }
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setAssignment(prev => ({
-      ...prev,
-      [name]: value
-    }));
-
-    // Update subject_name when subject_id changes
-    if (name === 'subject_id') {
-      const selectedSubject = facultySubjects.find(sub => sub.id === value);
-      if (selectedSubject) {
-        setAssignment(prev => ({
-          ...prev,
-          subject_name: selectedSubject.name,
-          class_id: selectedSubject.class_id,
-          class_name: selectedSubject.classes.name
-        }));
-      }
+    } catch (error) {
+      console.error('Error fetching submissions:', error);
+      setError('Failed to load submissions');
     }
   };
 
   const createAssignment = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError(null);
     
     try {
-      const { error } = await supabase
+      // First ensure we have a valid session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        throw new Error("Session expired. Please login again.");
+      }
+
+      // Insert the assignment
+      const { data: assignmentData, error: assignmentError } = await supabase
         .from('assignments')
         .insert({
-          created_by: userId,
+          created_by: session.user.id,
           subject_id: assignment.subject_id,
           subject_name: assignment.subject_name,
           class_id: assignment.class_id,
@@ -128,31 +133,37 @@ const AssignmentManagement = () => {
           description: assignment.description,
           due_date: assignment.due_date,
           max_score: assignment.max_score
-        });
+        })
+        .select();
 
-      if (error) throw error;
+      if (assignmentError) throw assignmentError;
 
       // Create initial submissions for all students in the class
-      const { data: students } = await supabase
+      const { data: students, error: studentsError } = await supabase
         .from('students')
         .select('id')
         .eq('class_id', assignment.class_id);
 
+      if (studentsError) throw studentsError;
+
       if (students && students.length > 0) {
         const submissionRecords = students.map(student => ({
-          assignment_id: data[0].id,
+          assignment_id: assignmentData[0].id,
           student_id: student.id,
           subject_name: assignment.subject_name,
           class_id: assignment.class_id,
-          status: false
+          status: false,
+          score: null
         }));
 
-        await supabase
+        const { error: submissionError } = await supabase
           .from('assignment_submissions')
           .insert(submissionRecords);
+
+        if (submissionError) throw submissionError;
       }
 
-      fetchAssignments();
+      await fetchAssignments();
       setShowAssignmentForm(false);
       setAssignment({
         subject_id: '',
@@ -166,22 +177,9 @@ const AssignmentManagement = () => {
       });
     } catch (error) {
       console.error('Assignment creation error:', error);
-      alert('Failed to create assignment');
-    }
-  };
-
-  const updateSubmissionStatus = async (submissionId, status) => {
-    try {
-      const { error } = await supabase
-        .from('assignment_submissions')
-        .update({ status })
-        .eq('id', submissionId);
-
-      if (error) throw error;
-
-      fetchSubmissions();
-    } catch (error) {
-      console.error('Error updating submission:', error);
+      setError(error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
