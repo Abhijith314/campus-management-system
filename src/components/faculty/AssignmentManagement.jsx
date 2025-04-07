@@ -15,6 +15,7 @@ const AssignmentManagement = () => {
     max_score: ''
   });
   const [assignments, setAssignments] = useState([]);
+  const [students, setStudents] = useState([]);
   const [submissions, setSubmissions] = useState([]);
   const [userId, setUserId] = useState(null);
   const [facultySubjects, setFacultySubjects] = useState([]);
@@ -27,8 +28,6 @@ const AssignmentManagement = () => {
     const fetchUserData = async () => {
       try {
         setLoading(true);
-        
-        // First ensure we have a valid session
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError || !session) {
@@ -38,15 +37,9 @@ const AssignmentManagement = () => {
         const user = session.user;
         setUserId(user.id);
         
-        // Fetch faculty's assigned subjects with class information
         const { data: subjectsData, error: subjectsError } = await supabase
           .from('subjects')
-          .select(`
-            id,
-            name,
-            class_id,
-            classes (id, name)
-          `)
+          .select(`id, name, class_id, classes(id, name)`)
           .eq('faculty_id', user.id);
 
         if (subjectsError) throw subjectsError;
@@ -62,10 +55,11 @@ const AssignmentManagement = () => {
     fetchUserData();
   }, []);
 
-  // Fetch assignments when class selection changes
+  // Fetch assignments and students when class selection changes
   useEffect(() => {
     if (selectedClass && userId) {
       fetchAssignments();
+      fetchStudents();
       fetchSubmissions();
     }
   }, [selectedClass, userId]);
@@ -89,14 +83,30 @@ const AssignmentManagement = () => {
     }
   };
 
+  const fetchStudents = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('students')
+        .select('id, name_of_student')
+        .eq('class_id', selectedClass);
+
+      if (error) throw error;
+      setStudents(data || []);
+    } catch (error) {
+      console.error('Error fetching students:', error);
+      setError('Failed to load students');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchSubmissions = async () => {
     try {
+      setLoading(true);
       const { data, error } = await supabase
         .from('assignment_submissions')
-        .select(`
-          *,
-          students (id, name_of_student)
-        `)
+        .select('*')
         .eq('class_id', selectedClass);
 
       if (error) throw error;
@@ -104,6 +114,28 @@ const AssignmentManagement = () => {
     } catch (error) {
       console.error('Error fetching submissions:', error);
       setError('Failed to load submissions');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setAssignment(prev => ({
+      ...prev,
+      [name]: value
+    }));
+
+    if (name === 'subject_id') {
+      const selectedSubject = facultySubjects.find(sub => sub.id === value);
+      if (selectedSubject) {
+        setAssignment(prev => ({
+          ...prev,
+          subject_name: selectedSubject.name,
+          class_id: selectedSubject.class_id,
+          class_name: selectedSubject.classes.name
+        }));
+      }
     }
   };
 
@@ -113,14 +145,9 @@ const AssignmentManagement = () => {
     setError(null);
     
     try {
-      // First ensure we have a valid session
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError || !session) {
-        throw new Error("Session expired. Please login again.");
-      }
+      if (sessionError || !session) throw new Error("Session expired. Please login again.");
 
-      // Insert the assignment
       const { data: assignmentData, error: assignmentError } = await supabase
         .from('assignments')
         .insert({
@@ -138,22 +165,14 @@ const AssignmentManagement = () => {
 
       if (assignmentError) throw assignmentError;
 
-      // Create initial submissions for all students in the class
-      const { data: students, error: studentsError } = await supabase
-        .from('students')
-        .select('id')
-        .eq('class_id', assignment.class_id);
-
-      if (studentsError) throw studentsError;
-
-      if (students && students.length > 0) {
+      // Create submission records for all students in the class
+      if (students?.length > 0) {
         const submissionRecords = students.map(student => ({
           assignment_id: assignmentData[0].id,
           student_id: student.id,
           subject_name: assignment.subject_name,
           class_id: assignment.class_id,
-          status: false,
-          score: null
+          status: false
         }));
 
         const { error: submissionError } = await supabase
@@ -164,6 +183,7 @@ const AssignmentManagement = () => {
       }
 
       await fetchAssignments();
+      await fetchSubmissions();
       setShowAssignmentForm(false);
       setAssignment({
         subject_id: '',
@@ -183,12 +203,37 @@ const AssignmentManagement = () => {
     }
   };
 
+  const updateSubmissionStatus = async (submissionId, status) => {
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('assignment_submissions')
+        .update({ status })
+        .eq('id', submissionId);
+
+      if (error) throw error;
+      await fetchSubmissions();
+    } catch (error) {
+      console.error('Error updating submission:', error);
+      setError('Failed to update submission status');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Helper function to get submission for a student and assignment
+  const getSubmissionForStudent = (studentId, assignmentId) => {
+    return submissions.find(
+      sub => sub.student_id === studentId && sub.assignment_id === assignmentId
+    );
+  };
+
   return (
     <div className="flex">
       <FacultySidebar />
       <div className="flex-1 p-5">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Assignment Management</h1> <br></br>
+          <h1 className="text-2xl font-bold">Assignment Management</h1>
           <button
             onClick={() => setShowAssignmentForm(true)}
             className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
@@ -199,11 +244,11 @@ const AssignmentManagement = () => {
 
         {/* Class Selection */}
         <div className="mb-6">
-          <label className="block mb-2 bg-grey font-medium">Select Class:</label>
+          <label className="block mb-2 font-medium">Select Class:</label>
           <select
             value={selectedClass}
             onChange={(e) => setSelectedClass(e.target.value)}
-            className="w-full p-2 border bg-black rounded"
+            className="w-full p-2 border rounded"
           >
             <option value="">Select a Class</option>
             {Array.from(new Set(facultySubjects.map(sub => sub.class_id))).map(classId => {
@@ -220,7 +265,7 @@ const AssignmentManagement = () => {
         {/* Assignment Creation Modal */}
         {showAssignmentForm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-            <div className="bg-black rounded-lg p-6 w-full max-w-md">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold">Create New Assignment</h2>
                 <button 
@@ -232,7 +277,7 @@ const AssignmentManagement = () => {
               </div>
               <form onSubmit={createAssignment}>
                 <div className="mb-4">
-                  <label className="block mb-1 font-medium bg-black">Subject</label>
+                  <label className="block mb-1 font-medium">Subject</label>
                   <select
                     name="subject_id"
                     value={assignment.subject_id}
@@ -302,7 +347,7 @@ const AssignmentManagement = () => {
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-black rounded hover:bg-blue-700"
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                   >
                     Create
                   </button>
@@ -318,10 +363,10 @@ const AssignmentManagement = () => {
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="text-black space-y-6">
             {selectedClass && assignments.length > 0 ? (
               assignments.map(assignment => (
-                <div key={assignment.id} className="bg-black rounded-lg shadow-md p-4">
+                <div key={assignment.id} className="bg-white rounded-lg shadow-md p-4">
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <h3 className="text-lg font-semibold">{assignment.title}</h3>
@@ -341,49 +386,61 @@ const AssignmentManagement = () => {
                         <tr>
                           <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Student</th>
                           <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Score</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">File</th>
                           <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                         </tr>
                       </thead>
-                      <tbody className="bg-black divide-y divide-gray-200">
-                        {submissions
-                          .filter(sub => sub.assignment_id === assignment.id)
-                          .map(submission => (
-                            <tr key={submission.id}>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {students.map(student => {
+                          const submission = getSubmissionForStudent(student.id, assignment.id);
+                          return (
+                            <tr key={`${assignment.id}-${student.id}`}>
                               <td className="px-4 py-2 whitespace-nowrap">
-                                {submission.students?.name_of_student || 'Unknown Student'}
+                                {student.name_of_student}
                               </td>
                               <td className="px-4 py-2 whitespace-nowrap">
                                 <span className={`px-2 py-1 rounded-full text-xs ${
-                                  submission.status ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                                  submission?.status ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                                 }`}>
-                                  {submission.status ? 'Submitted' : 'Pending'}
+                                  {submission?.status ? 'Submitted' : 'Pending'}
                                 </span>
                               </td>
                               <td className="px-4 py-2 whitespace-nowrap">
-                                {submission.score || '-'}
+                                {submission?.file_url ? (
+                                  <a 
+                                    href={submission.file_url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:underline"
+                                  >
+                                    View File
+                                  </a>
+                                ) : 'No file'}
                               </td>
-                              <td className="px-4 py-2 whitespace-nowrap">
-                                <button
-                                  onClick={() => updateSubmissionStatus(submission.id, !submission.status)}
-                                  className={`px-3 py-1 text-sm rounded ${
-                                    submission.status 
-                                      ? 'bg-yellow-500 text-white hover:bg-yellow-600' 
-                                      : 'bg-green-500 text-white hover:bg-green-600'
-                                  }`}
-                                >
-                                  {submission.status ? 'Mark Pending' : 'Mark Submitted'}
-                                </button>
+                              <td className="px-4 py-2 whitespace-nowrap space-x-2">
+                                {submission && (
+                                  <button
+                                    onClick={() => updateSubmissionStatus(submission.id, !submission.status)}
+                                    className={`px-3 py-1 text-sm rounded ${
+                                      submission.status 
+                                        ? 'bg-yellow-500 text-white hover:bg-yellow-600' 
+                                        : 'bg-green-500 text-white hover:bg-green-600'
+                                    }`}
+                                  >
+                                    {submission.status ? 'Mark Pending' : 'Mark Submitted'}
+                                  </button>
+                                )}
                               </td>
                             </tr>
-                          ))}
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="bg-black rounded-lg shadow-md p-6 text-center">
+              <div className="bg-white rounded-lg shadow-md p-6 text-center">
                 {selectedClass ? 'No assignments found for this class' : 'Please select a class to view assignments'}
               </div>
             )}
