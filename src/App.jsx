@@ -9,9 +9,16 @@ import StudentManagement from './components/hod/StudentManagement';
 import FacultyDashboard from './pages/FacultyDashboard';
 import MarksEntry from './components/faculty/MarksEntry';
 import AssignmentManagement from './components/faculty/AssignmentManagement';
+import AttendanceManagement from './components/faculty/AttendanceManagement';
 import BatchCoordinatorDashboard from './pages/BatchCoordinatorDashboard';
+import BatchAttendanceManagement from './components/batch-coordinator/BatchAttendanceManagement';
+import BatchAssignmentManagement from './components/batch-coordinator/BatchAssignment';
+import BatchMarks from './components/batch-coordinator/BatchMarks';
 import StudentDashboard from './pages/StudentDashboard';
 import ProfileCreation from './components/student/ProfileCreation';
+import InternalMarks from './components/student/InternalMarks';
+import StudentAssignments from './components/student/StudentAssignments';
+import StudentAttendance from './components/student/StudentAttendance';
 import StudentRegistration from './components/batch-coordinator/StudentRegistration';
 import { supabase } from './services/supabase'
 
@@ -51,6 +58,10 @@ const App = () => {
             element={<ProtectedRoute component={AssignmentManagement} requiredRole="Faculty" />} 
           />
           <Route 
+            path="/faculty/attendance" 
+            element={<ProtectedRoute component={AttendanceManagement} requiredRole="Faculty" />} 
+          />
+          <Route 
             path="/batch-coordinator-dashboard" 
             element={<ProtectedRoute component={BatchCoordinatorDashboard} requiredRole="Faculty" />} 
           />
@@ -59,12 +70,36 @@ const App = () => {
             element={<ProtectedRoute component={StudentRegistration} requiredRole="Faculty" />} 
           />
           <Route 
+            path="batch-coordinator/attendance" 
+            element={<ProtectedRoute component={BatchAttendanceManagement} requiredRole="Faculty" />} 
+          />
+          <Route 
+            path="batch-coordinator/assignment" 
+            element={<ProtectedRoute component={BatchAssignmentManagement} requiredRole="Faculty" />} 
+          />
+          <Route 
+            path="batch-coordinator/marks" 
+            element={<ProtectedRoute component={BatchMarks} requiredRole="Faculty" />} 
+          />
+          <Route 
             path="/student-dashboard" 
             element={<ProtectedRoute component={StudentDashboard} requiredRole="Student" />} 
           />
           <Route 
             path="/student/profile" 
             element={<ProtectedRoute component={ProfileCreation} requiredRole="Student" />} 
+          />
+          <Route 
+            path="/student/internals" 
+            element={<ProtectedRoute component={InternalMarks} requiredRole="Student" />} 
+          />
+          <Route 
+            path="/student/assignment" 
+            element={<ProtectedRoute component={StudentAssignments} requiredRole="Student" />} 
+          />
+          <Route 
+            path="/student/attendance" 
+            element={<ProtectedRoute component={StudentAttendance} requiredRole="Student" />} 
           />
           <Route path="/" element={<Navigate to="/login" />} />
         </Routes>

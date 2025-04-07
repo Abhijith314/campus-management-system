@@ -31,13 +31,12 @@ export const getClassStudents = async (classId) => {
   }
 };
 
-export const getInternalMarks = async (subjectId, assessmentType) => {
+export const getInternalMarks = async (subjectId) => {
   try {
     const { data, error } = await supabase
       .from('internal_marks')
       .select('*')
-      .eq('subject_id', subjectId)
-      .eq('assessment_type', assessmentType);
+      .eq('subject_id', subjectId);
 
     if (error) throw error;
     return data || [];
@@ -48,26 +47,54 @@ export const getInternalMarks = async (subjectId, assessmentType) => {
 };
 
 export const upsertMarks = async (marksData, maxMarks, assessmentType) => {
-    try {
-      const upsertData = marksData.map(mark => ({
+  try {
+    // Step 1: Get all current marks for these students
+    const studentIds = marksData.map(m => m.student_id);
+    const { data: existingData, error: fetchError } = await supabase
+      .from('internal_marks')
+      .select('*')
+      .in('student_id', studentIds)
+      .eq('subject_id', marksData[0]?.subject_id);
+
+    if (fetchError) throw fetchError;
+
+    const existingMap = {};
+    existingData.forEach(row => {
+      existingMap[`${row.student_id}`] = row;
+    });
+
+    // Step 2: Prepare upsert data, preserving the other internal mark
+    const upsertData = marksData.map(mark => {
+      const existing = existingMap[mark.student_id] || {};
+
+      return {
         student_id: mark.student_id,
         subject_id: mark.subject_id,
-        assessment_type: assessmentType,
         max_marks: maxMarks,
-        [assessmentType === 'internal1' ? 'internal1_marks' : 'internal2_marks']: mark.marks
-      }));
-  
-      const { data, error } = await supabase
-        .from('internal_marks')
-        .upsert(upsertData, { 
-          onConflict: 'student_id,subject_id,assessment_type'
-        })
-        .select();
-  
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error("Error saving marks:", error);
-      throw error;
-    }
-  };
+        internal1_marks:
+          assessmentType === 'internal1'
+            ? mark.marks
+            : existing.internal1_marks ?? null,
+        internal2_marks:
+          assessmentType === 'internal2'
+            ? mark.marks
+            : existing.internal2_marks ?? null,
+      };
+    });
+
+    // Step 3: Upsert with both columns
+    const { data, error } = await supabase
+      .from('internal_marks')
+      .upsert(upsertData, {
+        onConflict: 'student_id,subject_id',
+      })
+      .select();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error saving marks:', error);
+    throw error;
+  }
+};
+

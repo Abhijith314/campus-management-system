@@ -1,11 +1,11 @@
 import Sidebar from "../Sidebar";
 
 const menuItems = [
-    { name: "Dashboard", path: "/hod-dashboard" },
+    { name: "Dashboard", path: "/student-dashboard" },
     { name: "Profile", path: "/student/profile" },
-    { name: "Internals", path: "/hod/faculty" },
-    { name: "Assignments", path: "/hod/students" },
-    { name: "Attendence", path: "/hod/students" }
+    { name: "Internals", path: "/student/internals" },
+    { name: "Assignments", path: "/student/assignment" },
+    { name: "Attendence", path: "/student/attendance" }
 ];
 
 const StudentSidebar = () => <Sidebar role="Student" menuItems={menuItems} />;

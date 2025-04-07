@@ -69,20 +69,20 @@ const ProfileCreation = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+  
     try {
       setLoading(true);
-      
+  
       const { error } = await supabase
         .from('students')
-        .upsert({
-          id: userId,
+        .update({
           ph_no: profileData.ph_no,
           addr: profileData.addr
-        }, { onConflict: 'id' });
-
+        })
+        .eq('reg_no', profileData.reg_no); // Use reg_no instead of id
+  
       if (error) throw error;
-
+  
       alert('Profile updated successfully!');
     } catch (error) {
       console.error('Update error:', error);
@@ -90,7 +90,8 @@ const ProfileCreation = () => {
     } finally {
       setLoading(false);
     }
-  };
+  };  
+  
 
   if (loading) {
     return (

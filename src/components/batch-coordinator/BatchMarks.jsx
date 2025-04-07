@@ -6,9 +6,9 @@ import {
   getInternalMarks,
   upsertMarks
 } from '../../services/marksService';
-import FacultySidebar from './FacultySidebar';
+import BatchcoordinatorSidebar from './BatchcoordinatorSidebar';
 
-const MarksEntry = () => {
+const BatchMarks = () => {
   const [facultyId, setFacultyId] = useState(null);
   const [classes, setClasses] = useState([]);
   const [selectedClass, setSelectedClass] = useState('');
@@ -80,8 +80,7 @@ const MarksEntry = () => {
         setLoading(true);
         const [studentsData, marksData] = await Promise.all([
           getClassStudents(selectedClass),
-          getInternalMarks(selectedSubject)
-
+          getInternalMarks(selectedSubject, assessmentType)
         ]);
 
         setStudents(studentsData);
@@ -145,7 +144,7 @@ const MarksEntry = () => {
 
   return (
     <div className="flex">
-      <FacultySidebar />
+      <BatchcoordinatorSidebar />
     <div className="p-6 max-w-4xl mx-auto text-black bg-white rounded-lg shadow-lg">
       <h2 className="text-2xl font-bold mb-6 text-center text-blue-700">Internal Marks Entry</h2>
       
@@ -273,4 +272,4 @@ const MarksEntry = () => {
   );
 };
 
-export default MarksEntry;
+export default BatchMarks;

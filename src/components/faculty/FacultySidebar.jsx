@@ -5,6 +5,7 @@ const menuItems = [
     { name: "Classes", path: "/faculty/classes" },
     { name: "Marks", path: "/faculty/marks" },
     { name: "Assignment", path: "/faculty/assignment" },
+    { name: "Attendance", path: "/faculty/attendance" },
     { name: "Students", path: "/faculty/students" }
 ];
 

@@ -208,7 +208,7 @@ const StudentRegistration = () => {
                     <div className="fixed inset-0 flex items-center justify-center bg-grey bg-opacity-50">
                         <div className="bg-black p-5 rounded-md text-center w-96">
                             <h3 className="text-xl font-bold mb-4">Student Registered Successfully</h3>
-                            <div className="bg-gray-100 p-4 rounded mb-4">
+                            <div className="bg-gray text-black-100 p-4 rounded mb-4">
                                 <p className="font-semibold">Initial Login Details:</p>
                                 <p>Email: <strong>{initialCredentials.email}</strong></p>
                                 <p>Password: <strong>{initialCredentials.password}</strong></p>
