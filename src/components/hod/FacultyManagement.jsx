@@ -1,5 +1,9 @@
 import { useState, useEffect } from "react";
-import { getFaculty, toggleFacultyStatus, addFaculty } from "../../services/facultyService";
+import {
+    getFaculty,
+    toggleFacultyStatus,
+    addFaculty,
+} from "../../services/facultyService";
 import HODSidebar from "./HODSidebar";
 
 const FacultyManagement = () => {
@@ -35,13 +39,14 @@ const FacultyManagement = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
         const result = await addFaculty(newFaculty);
-        
+
         if (result.success) {
             setInitialPassword(result.initialPassword);
             setShowForm(false);
             setShowPasswordModal(true);
-            setFaculty(await getFaculty()); // Refresh faculty list
+            setFaculty(await getFaculty());
         } else {
             alert(result.error);
         }
@@ -85,15 +90,23 @@ const FacultyManagement = () => {
                                     <td className="border p-3">{f.email}</td>
                                     <td className="border p-3">{f.phone}</td>
                                     <td className="border p-3">{f.dept}</td>
-                                    <td className="border p-3">{f.activeStatus ? "Active" : "Inactive"}</td>
+                                    <td className="border p-3">
+                                        {f.activeStatus ? "Active" : "Inactive"}
+                                    </td>
                                     <td className="border p-3">
                                         <button
-                                            onClick={() => handleToggleStatus(f.id, f.activeStatus)}
+                                            onClick={() =>
+                                                handleToggleStatus(f.id, f.activeStatus)
+                                            }
                                             className={`px-3 py-1 text-white rounded-md ${
-                                                f.activeStatus ? "bg-red-500" : "bg-green-500"
+                                                f.activeStatus
+                                                    ? "bg-red-500"
+                                                    : "bg-green-500"
                                             }`}
                                         >
-                                            {f.activeStatus ? "Deactivate" : "Activate"}
+                                            {f.activeStatus
+                                                ? "Deactivate"
+                                                : "Activate"}
                                         </button>
                                     </td>
                                 </tr>
@@ -102,7 +115,7 @@ const FacultyManagement = () => {
                     </table>
                 </div>
 
-                {/* Faculty Registration Modal */}
+                {/* Add Faculty Form Modal */}
                 {showForm && (
                     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
                         <div className="bg-black p-5 rounded-md">
@@ -144,7 +157,10 @@ const FacultyManagement = () => {
                                     onChange={handleInputChange}
                                     required
                                 />
-                                <button type="submit" className="bg-blue-600 text-white px-4 py-2 mt-3 rounded-md w-full">
+                                <button
+                                    type="submit"
+                                    className="bg-blue-600 text-white px-4 py-2 mt-3 rounded-md w-full"
+                                >
                                     Submit
                                 </button>
                                 <button
@@ -163,9 +179,17 @@ const FacultyManagement = () => {
                 {showPasswordModal && (
                     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
                         <div className="bg-black p-5 rounded-md text-center">
-                            <h3 className="text-xl font-bold mb-4">Faculty Added Successfully</h3>
-                            <p className="mb-4">Initial Password: <strong>{initialPassword}</strong></p>
-                            <p className="mb-4 text-red-500">Please ask the faculty to change this password upon first login.</p>
+                            <h3 className="text-xl font-bold mb-4">
+                                Faculty Added Successfully
+                            </h3>
+                            <p className="mb-4">
+                                Initial Password:{" "}
+                                <strong>{initialPassword}</strong>
+                            </p>
+                            <p className="mb-4 text-red-500">
+                                Please ask the faculty to change this password
+                                upon first login.
+                            </p>
                             <button
                                 className="bg-blue-600 text-white px-4 py-2 rounded-md"
                                 onClick={handlePasswordModalClose}
