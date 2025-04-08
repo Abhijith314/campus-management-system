@@ -68,7 +68,7 @@ export const getSubjectsByClass = async (classId) => {
         .from("subjects")
         .select(`
             *,
-            faculties (id, name, dept)
+            faculty (id, name, dept)
         `)
         .eq("class_id", classId);
 
@@ -91,7 +91,23 @@ export const assignFacultyToSubject = async (subjectId, facultyId) => {
         console.error("Error assigning faculty:", error);
         return null;
     }
-    return data[0];
+    
+    // Fetch the updated subject with faculty data
+    const { data: updatedData, error: fetchError } = await supabase
+        .from("subjects")
+        .select(`
+            *,
+            faculty (id, name, dept)
+        `)
+        .eq("id", subjectId)
+        .single();
+        
+    if (fetchError) {
+        console.error("Error fetching updated subject:", fetchError);
+        return data[0]; // Return basic data without faculty info
+    }
+    
+    return updatedData;
 };
 
 // Delete a subject
@@ -121,4 +137,3 @@ export const deleteClass = async (classId) => {
     }
     return true;
 };
-

@@ -6,6 +6,7 @@ import HODDashboard from './pages/HODDashboard';
 import ClassManagement from './components/hod/ClassManagement';
 import FacultyManagement from './components/hod/FacultyManagement';
 import StudentManagement from './components/hod/StudentManagement';
+import FacultySubjectAssignment from './components/hod/FacultySubject';
 import FacultyDashboard from './pages/FacultyDashboard';
 import MarksEntry from './components/faculty/MarksEntry';
 import AssignmentManagement from './components/faculty/AssignmentManagement';
@@ -44,6 +45,10 @@ const App = () => {
           <Route 
             path="/hod/students" 
             element={<ProtectedRoute component={StudentManagement} requiredRole="HOD" />} 
+          />
+          <Route 
+            path="/hod/showfaculty" 
+            element={<ProtectedRoute component={FacultySubjectAssignment} requiredRole="HOD" />} 
           />
           <Route 
             path="/faculty-dashboard" 

@@ -121,6 +121,7 @@ const ClassManagement = () => {
     const handleAssignFaculty = async (subjectId, facultyId) => {
         const updatedSubject = await assignFacultyToSubject(subjectId, facultyId);
         if (updatedSubject) {
+            // Update the subjects array with the new data
             const updatedSubjects = subjects.map(subject => 
                 subject.id === updatedSubject.id ? updatedSubject : subject
             );
@@ -161,7 +162,7 @@ const ClassManagement = () => {
 
     return (
         <div className="flex">
-            <HODSidebar />
+            <div className="static"><HODSidebar /></div>
             
             <div className="container mx-auto p-6 flex-1">
                 <div className="flex justify-between items-center mb-6">
@@ -315,8 +316,8 @@ const ClassManagement = () => {
                                         <div key={subject.id} className="bg-white p-3 rounded-md shadow-sm border border-gray-200">
                                             <h4 className="font-medium">{subject.name}</h4>
                                             <p className="text-sm text-gray-500">
-                                                {subject.faculties ? 
-                                                    `Faculty: ${subject.faculties.name} (${subject.faculties.dept})` : 
+                                                {subject.faculty ? 
+                                                    `Faculty: ${subject.faculty.name} (${subject.faculty.dept})` : 
                                                     'No faculty assigned'}
                                             </p>
                                         </div>
@@ -379,9 +380,9 @@ const ClassManagement = () => {
                                                         <tr key={subject.id} className="border hover:bg-gray-50">
                                                             <td className="border p-2">{subject.name}</td>
                                                             <td className="border p-2">
-                                                                {subject.faculties ? (
+                                                                {subject.faculty ? (
                                                                     <span>
-                                                                        {subject.faculties.name} ({subject.faculties.dept})
+                                                                        {subject.faculty.name} ({subject.faculty.dept})
                                                                     </span>
                                                                 ) : (
                                                                     <select
